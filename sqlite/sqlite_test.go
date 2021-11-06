@@ -16,4 +16,12 @@ func TestSQliteDriver(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+
+	t.Run("file operations", func(t *testing.T) {
+		testFileOperations(t, db)
+	})
+
+	t.Run("chunk operations", func(t *testing.T) {
+		testChunkOperations(t, db)
+	})
 }

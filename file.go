@@ -1,6 +1,9 @@
 package chunkyUploads
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type (
 	UUID   []byte
@@ -17,7 +20,7 @@ type (
 		ContentType                     string
 		Status                          Status
 		Size                            int64
-		CreatedAt, UpdatedAt, DeletedAt int64
+		CreatedAt, UpdatedAt, DeletedAt time.Time
 	}
 
 	FileRepository interface {

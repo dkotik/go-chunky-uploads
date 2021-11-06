@@ -13,14 +13,15 @@ type SQLiteDriver struct {
 	tableChunkAttachments string
 	db                    *sql.DB
 
-	sqlFileCreate    *sql.Stmt
-	sqlFileRetrieve  *sql.Stmt
-	sqlFileUpdate    *sql.Stmt
-	sqlFileDelete    *sql.Stmt
-	sqlChunkCreate   *sql.Stmt
-	sqlChunkRetrieve *sql.Stmt
-	sqlChunkUpdate   *sql.Stmt
-	sqlChunkDelete   *sql.Stmt
+	sqlFileCreate            *sql.Stmt
+	sqlFileRetrieve          *sql.Stmt
+	sqlFileUpdate            *sql.Stmt
+	sqlFileDelete            *sql.Stmt
+	sqlChunkCreate           *sql.Stmt
+	sqlChunkCreateAttachment *sql.Stmt
+	sqlChunkAttachmentList   *sql.Stmt
+	sqlChunkRetrieve         *sql.Stmt
+	sqlChunkDelete           *sql.Stmt
 }
 
 func NewSQLiteDriver(tablePrefix, path string) (*SQLiteDriver, error) {
@@ -40,36 +41,39 @@ func NewSQLiteDriver(tablePrefix, path string) (*SQLiteDriver, error) {
 	for _, statement := range []string{
 		`CREATE TABLE IF NOT EXISTS ` + driver.tableFiles + ` (
             uuid BLOB PRIMARY KEY,
-			hash BLOB,
-			path TEXT,
-		    title TEXT,
-			description TEXT,
-			content_type TEXT,
-			status INTEGER,
-			size INTEGER,
-			created_at INTEGER,
-			updated_at INTEGER,
-			deleted_at INTEGER
+			hash BLOB NOT NULL,
+			path TEXT NOT NULL,
+		    title TEXT NOT NULL,
+			description TEXT NOT NULL,
+			content_type TEXT NOT NULL,
+			status INTEGER NOT NULL,
+			size INTEGER NOT NULL,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL,
+			deleted_at INTEGER NOT NULL
         )`,
 		`CREATE TABLE IF NOT EXISTS ` + driver.tableChunks + ` (
             uuid BLOB PRIMARY KEY,
-			hash BLOB,
-			content BLOB
+			hash BLOB NOT NULL,
+			content BLOB NOT NULL,
+			referenced INTEGER NOT NULL
         )`,
 		`CREATE TABLE IF NOT EXISTS ` + driver.tableChunkAttachments + ` (
-            file BLOB,
-			chunk BLOB,
-			start INTEGER,
-			end INTEGER
+            file BLOB KEY,
+			chunk BLOB KEY,
+			start INTEGER NOT NULL,
+			end INTEGER NOT NULL
         )`,
 	} {
 		_, err = db.Exec(statement)
 		if err != nil {
+			db.Close()
 			return nil, err
 		}
 	}
 
 	if err = driver.setupStatements(); err != nil {
+		db.Close()
 		return nil, err
 	}
 
@@ -82,8 +86,9 @@ func (s *SQLiteDriver) Close() error {
 	s.sqlFileUpdate.Close()
 	s.sqlFileDelete.Close()
 	s.sqlChunkCreate.Close()
+	s.sqlChunkCreateAttachment.Close()
+	s.sqlChunkAttachmentList.Close()
 	s.sqlChunkRetrieve.Close()
-	s.sqlChunkUpdate.Close()
 	s.sqlChunkDelete.Close()
 	return s.db.Close()
 }
