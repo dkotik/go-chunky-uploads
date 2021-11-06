@@ -3,31 +3,69 @@ package chunkyUploads
 import (
 	"bytes"
 	"context"
+	"errors"
+	"hash"
 	"io"
-	"os"
+)
+
+var (
+	ErrIncompleteCopy = errors.New("failed to copy all the bytes")
 )
 
 type Uploads struct {
-	Repository
-
-	ChunkSize int
+	files        FileRepository
+	chunks       ChunkRepository
+	hashProvider func() hash.Hash
+	uuidProvider func() UUID
+	chunkSize    int
 }
 
-func (u *Uploads) Writer(ctx context.Context, file *File) (io.WriteCloser, error) {
-	if file == nil {
-		return nil, os.ErrNotExist
+func (u *Uploads) Copy(ctx context.Context, w io.Writer, uuid UUID) error {
+	list, err := u.chunks.ChunkAttachmentList(ctx, uuid)
+	if err != nil {
+		return err
 	}
+	for _, one := range list {
+		chunk, err := u.chunks.ChunkRetrieve(ctx, one.Chunk)
+		if err != nil {
+			return err
+		}
+		n, err := io.Copy(w, bytes.NewReader(chunk.Content))
+		if err != nil {
+			return err
+		}
+		if int(n) != len(chunk.Content) {
+			return ErrIncompleteCopy
+		}
+	}
+	return nil
+}
 
-	file.Status = StatusUploading
-	if err := u.Repository.Create(ctx, file); err != nil {
-		return nil, err
+func (u *Uploads) CopyRange(ctx context.Context, w io.Writer, uuid UUID, ra Range) error {
+	list, err := u.chunks.ChunkAttachmentList(ctx, uuid)
+	if err != nil {
+		return err
 	}
-
-	w := &writer{
-		ctx:    ctx,
-		file:   file,
-		buffer: &bytes.Buffer{},
+	left := ra.End - ra.Start
+	for _, one := range list {
+		if one.End < ra.Start {
+			continue // chunk does not apply
+		}
+		chunk, err := u.chunks.ChunkRetrieve(ctx, one.Chunk)
+		if err != nil {
+			return err
+		}
+		n, err := io.Copy(w, io.LimitReader(bytes.NewReader(chunk.Content), left))
+		if err != nil {
+			return err
+		}
+		if int(n) != len(chunk.Content) {
+			return ErrIncompleteCopy
+		}
+		left -= n
 	}
-	w.buffer.Grow(u.ChunkSize)
-	return w, nil
+	if left > 0 {
+		return ErrIncompleteCopy
+	}
+	return nil
 }

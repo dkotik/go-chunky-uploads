@@ -1,2 +1,2 @@
 default:
-	go test .
+	go test ./...
