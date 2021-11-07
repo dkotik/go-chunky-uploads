@@ -22,7 +22,9 @@ type (
 		ChunkCreate(context.Context, *File, *Chunk) error
 		ChunkRetrieve(context.Context, UUID) (*Chunk, error)
 		ChunkDelete(context.Context, UUID) error
+
 		ChunkAttachmentList(context.Context, UUID) ([]*ChunkAttachment, error)
+		ChunkStorageUsage(context.Context) (uint64, error)
 	}
 
 	// ChunkQuery(context.Context, *ChunkQuery) ([]*Chunk, error)

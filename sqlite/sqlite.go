@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 
+	chunkyUploads "github.com/dkotik/go-chunky-uploads"
 	_ "github.com/mattn/go-sqlite3" // database driver
 )
+
+var _ chunkyUploads.FileRepository = (*SQLiteDriver)(nil)
 
 type SQLiteDriver struct {
 	tableFiles            string
@@ -22,6 +25,7 @@ type SQLiteDriver struct {
 	sqlChunkAttachmentList   *sql.Stmt
 	sqlChunkRetrieve         *sql.Stmt
 	sqlChunkDelete           *sql.Stmt
+	sqlChunkStorageUsage     *sql.Stmt
 }
 
 func NewSQLiteDriver(tablePrefix, path string) (*SQLiteDriver, error) {
@@ -56,7 +60,8 @@ func NewSQLiteDriver(tablePrefix, path string) (*SQLiteDriver, error) {
             uuid BLOB PRIMARY KEY,
 			hash BLOB NOT NULL,
 			content BLOB NOT NULL,
-			referenced INTEGER NOT NULL
+			referenced INTEGER NOT NULL,
+			size INTEGER NOT NULL
         )`,
 		`CREATE TABLE IF NOT EXISTS ` + driver.tableChunkAttachments + ` (
             file BLOB KEY,
@@ -90,5 +95,6 @@ func (s *SQLiteDriver) Close() error {
 	s.sqlChunkAttachmentList.Close()
 	s.sqlChunkRetrieve.Close()
 	s.sqlChunkDelete.Close()
+	s.sqlChunkStorageUsage.Close()
 	return s.db.Close()
 }

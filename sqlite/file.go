@@ -51,7 +51,7 @@ func (s *SQLiteDriver) FileRetrieve(ctx context.Context, uuid chunkyUploads.UUID
 	return result, nil
 }
 
-func (s *SQLiteDriver) FileUpdate(ctx context.Context, update func(f *chunkyUploads.File) error, uuid chunkyUploads.UUID) error {
+func (s *SQLiteDriver) FileUpdate(ctx context.Context, uuid chunkyUploads.UUID, update func(f *chunkyUploads.File) error) error {
 	f, err := s.FileRetrieve(ctx, uuid)
 	if err != nil {
 		return err

@@ -24,4 +24,8 @@ func TestSQliteDriver(t *testing.T) {
 	t.Run("chunk operations", func(t *testing.T) {
 		testChunkOperations(t, db)
 	})
+
+	t.Run("query operations", func(t *testing.T) {
+		testQueryOperations(t, db)
+	})
 }

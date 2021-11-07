@@ -19,10 +19,10 @@ func testFileOperations(t *testing.T, db *SQLiteDriver) {
 		t.Fatal(err)
 	}
 
-	err = db.FileUpdate(ctx, func(f *chunkyUploads.File) error {
+	err = db.FileUpdate(ctx, uuid, func(f *chunkyUploads.File) error {
 		f.Title = "updated title"
 		return nil
-	}, uuid)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

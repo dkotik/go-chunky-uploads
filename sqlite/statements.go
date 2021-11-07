@@ -2,7 +2,7 @@ package sqlite
 
 func (s *SQLiteDriver) setupStatements() (err error) {
 	if s.sqlChunkCreate, err = s.db.Prepare(
-		`INSERT INTO ` + s.tableChunks + ` (uuid, hash, content) VALUES(?,?,?)`); err != nil {
+		`INSERT INTO ` + s.tableChunks + ` (uuid, hash, content, referenced, size) VALUES(?,?,?,1,?)`); err != nil {
 		return err
 	}
 
@@ -46,6 +46,10 @@ func (s *SQLiteDriver) setupStatements() (err error) {
 
 	if s.sqlFileDelete, err = s.db.Prepare(
 		`DELETE FROM ` + s.tableFiles + ` WHERE uuid=?`); err != nil {
+		return err
+	}
+
+	if s.sqlChunkStorageUsage, err = s.db.Prepare(`SELECT SUM("size") FROM ` + s.tableChunks); err != nil {
 		return err
 	}
 

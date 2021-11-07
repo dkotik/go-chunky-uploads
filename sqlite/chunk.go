@@ -17,7 +17,7 @@ func (s *SQLiteDriver) ChunkCreate(ctx context.Context, f *chunkyUploads.File, c
 
 	create := tx.Stmt(s.sqlChunkCreate)
 	defer create.Close()
-	_, err = create.ExecContext(ctx, c.UUID, c.Hash, c.Content)
+	_, err = create.ExecContext(ctx, c.UUID, c.Hash, c.Content, len(c.Content))
 	if err != nil {
 		return err
 	}
@@ -82,4 +82,16 @@ func (s *SQLiteDriver) ChunkAttachmentList(ctx context.Context, uuid chunkyUploa
 func (s *SQLiteDriver) ChunkDelete(ctx context.Context, uuid chunkyUploads.UUID) error {
 	_, err := s.sqlChunkDelete.ExecContext(ctx, uuid)
 	return err
+}
+
+func (s *SQLiteDriver) ChunkStorageUsage(ctx context.Context) (n uint64, err error) {
+	row := s.sqlChunkStorageUsage.QueryRowContext(ctx)
+	if err = row.Err(); err != nil {
+		return 0, err
+	}
+	var nn sql.NullInt64
+	if err = row.Scan(&nn); err != nil {
+		return 0, err
+	}
+	return uint64(nn.Int64), nil
 }

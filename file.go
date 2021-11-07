@@ -6,10 +6,11 @@ import (
 )
 
 type (
-	UUID   []byte
-	Hash   []byte
-	Range  struct{ Start, End int64 }
-	Status uint8
+	UUID       []byte
+	Hash       []byte
+	Range      struct{ Start, End int64 }
+	Status     uint8
+	QueryOrder uint8
 
 	File struct {
 		UUID                            UUID
@@ -29,24 +30,40 @@ type (
 		FileUpdate(context.Context, UUID, func(*File) error) error
 		FileDelete(context.Context, UUID) error
 
-		FileQuery(context.Context, *FileQuery) ([]*File, error)
+		FileQuery(context.Context, *FileQuery) (*FileQueryResult, error)
 	}
 
 	FileQuery struct {
-		Path    string
-		Status  Status
-		Size    *Range
-		Created *Range
-		Updated *Range
-		Deleted *Range
+		Page       uint32
+		PerPage    uint8
+		OrderBy    QueryOrder
+		Descending bool
+		Status     Status
+		Path       string
+		Size       *Range
+		CreatedAt  *Range
+		UpdatedAt  *Range
+		DeletedAt  *Range
+	}
+
+	FileQueryResult struct {
+		Files             []*File
+		Start, End, Total uint64
 	}
 )
 
 const (
-	StatusUnkown = iota
+	StatusUnkown Status = iota
 	StatusUploading
 	StatusCancelled
 	StatusError
 	StatusComplete
 	StatusDeleted
+
+	QueryOrderByUnknown QueryOrder = iota
+	QueryOrderByStatus
+	QueryOrderBySize
+	QueryOrderByCreated
+	QueryOrderByUpdated
+	QueryOrderByDeleted
 )

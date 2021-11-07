@@ -10,14 +10,16 @@ import (
 
 var (
 	ErrIncompleteCopy = errors.New("failed to copy all the bytes")
+	ErrStorageFull    = errors.New("storage is overwhelmed")
 )
 
 type Uploads struct {
-	files        FileRepository
-	chunks       ChunkRepository
-	hashProvider func() hash.Hash
-	uuidProvider func() UUID
-	chunkSize    int
+	files             FileRepository
+	chunks            ChunkRepository
+	hashProvider      func() hash.Hash
+	uuidProvider      func() UUID
+	chunkSize         int
+	chunkStorageLimit uint64
 }
 
 func (u *Uploads) Copy(ctx context.Context, w io.Writer, uuid UUID) error {

@@ -44,12 +44,13 @@ type writer struct {
 }
 
 func (w *writer) Write(b []byte) (n int, err error) {
+	// writing should work with concurrency?
 	remaining := w.buffer.Cap() - w.buffer.Len()
 	defer func() {
 		if err != nil {
 			w.buffer.Truncate(w.buffer.Cap() - remaining)
 			w.uploads.files.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
-				f.Status = StatusError
+				f.Status = StatusError // should apply to all failures! flush should be closured
 				return nil
 			})
 		}
@@ -74,6 +75,11 @@ func (w *writer) Flush() (err error) {
 	if w.buffer.Len() == 0 {
 		return nil
 	}
+	usage, err := w.uploads.chunks.ChunkStorageUsage(w.ctx)
+	if usage+uint64(w.buffer.Len()) > w.uploads.chunkStorageLimit {
+		return ErrStorageFull
+	}
+
 	hash := w.uploads.hashProvider()
 	_, err = io.Copy(hash, w.buffer)
 	if err != nil {
