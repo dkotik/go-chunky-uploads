@@ -35,7 +35,7 @@ type (
 
 	FileQuery struct {
 		Page       uint32
-		PerPage    uint8
+		PerPage    uint32
 		OrderBy    QueryOrder
 		Descending bool
 		Status     Status

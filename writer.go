@@ -21,7 +21,7 @@ func (u *Uploads) Writer(ctx context.Context, file *File) (io.WriteCloser, error
 	}
 
 	file.Status = StatusUploading
-	if err := u.files.FileCreate(ctx, file); err != nil {
+	if err := u.FileRepository.FileCreate(ctx, file); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (w *writer) Write(b []byte) (n int, err error) {
 	defer func() {
 		if err != nil {
 			w.buffer.Truncate(w.buffer.Cap() - remaining)
-			w.uploads.files.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
+			w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
 				f.Status = StatusError // should apply to all failures! flush should be closured
 				return nil
 			})
@@ -75,7 +75,7 @@ func (w *writer) Flush() (err error) {
 	if w.buffer.Len() == 0 {
 		return nil
 	}
-	usage, err := w.uploads.chunks.ChunkStorageUsage(w.ctx)
+	usage, err := w.uploads.ChunkRepository.ChunkStorageUsage(w.ctx)
 	if usage+uint64(w.buffer.Len()) > w.uploads.chunkStorageLimit {
 		return ErrStorageFull
 	}
@@ -90,8 +90,8 @@ func (w *writer) Flush() (err error) {
 		Content: w.buffer.Bytes(),
 		Hash:    hash.Sum(nil),
 	}
-	if err = w.uploads.chunks.ChunkCreate(w.ctx, w.file, chunk); err != nil {
-		w.uploads.files.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
+	if err = w.uploads.ChunkRepository.ChunkCreate(w.ctx, w.file, chunk); err != nil {
+		w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
 			f.Status = StatusError
 			return nil
 		})
@@ -109,7 +109,7 @@ func (w *writer) Close() error {
 	if err := w.Flush(); err != nil {
 		return err
 	}
-	return w.uploads.files.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
+	return w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
 		f.Hash = w.hash.Sum(nil)
 		f.Status = StatusComplete
 		return nil
