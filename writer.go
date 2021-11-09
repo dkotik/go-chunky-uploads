@@ -46,16 +46,6 @@ type writer struct {
 func (w *writer) Write(b []byte) (n int, err error) {
 	// writing should work with concurrency?
 	remaining := w.buffer.Cap() - w.buffer.Len()
-	defer func() {
-		if err != nil {
-			w.buffer.Truncate(w.buffer.Cap() - remaining)
-			w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
-				f.Status = StatusError // should apply to all failures! flush should be closured
-				return nil
-			})
-		}
-	}()
-
 	if len(b) > remaining {
 		b = b[:remaining]
 	}
@@ -71,38 +61,20 @@ func (w *writer) Write(b []byte) (n int, err error) {
 	return
 }
 
-func (w *writer) Flush() (err error) {
+func (w *writer) Flush() error {
 	if w.buffer.Len() == 0 {
 		return nil
 	}
-	usage, err := w.uploads.ChunkRepository.ChunkStorageUsage(w.ctx)
-	if usage+uint64(w.buffer.Len()) > w.uploads.chunkStorageLimit {
-		return ErrStorageFull
-	}
-
-	hash := w.uploads.hashProvider()
-	_, err = io.Copy(hash, w.buffer)
+	defer w.buffer.Reset()
+	_, err := w.uploads.append(w.ctx, w.file, w.buffer.Bytes())
 	if err != nil {
-		return err
-	}
-	chunk := &Chunk{
-		UUID:    w.uploads.uuidProvider(),
-		Content: w.buffer.Bytes(),
-		Hash:    hash.Sum(nil),
-	}
-	if err = w.uploads.ChunkRepository.ChunkCreate(w.ctx, w.file, chunk); err != nil {
-		w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
-			f.Status = StatusError
-			return nil
-		})
-		return err
+		_, err = w.uploads.append(w.ctx, w.file, w.buffer.Bytes()) // try again
+		if err != nil {
+			return err
+		}
 	}
 	_, err = io.Copy(w.hash, w.buffer)
-	if err != nil {
-		return err
-	}
-	w.buffer.Reset()
-	return nil
+	return err
 }
 
 func (w *writer) Close() error {

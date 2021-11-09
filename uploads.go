@@ -16,10 +16,11 @@ var (
 type Uploads struct {
 	FileRepository
 	ChunkRepository
-	hashProvider      func() hash.Hash
-	uuidProvider      func() UUID
-	chunkSize         int
-	chunkStorageLimit uint64
+	hashProvider        func() hash.Hash
+	uuidProvider        func() UUID
+	contentTypeDetector ContentTypeDetector
+	chunkSize           int
+	chunkStorageLimit   uint64
 }
 
 func (u *Uploads) Copy(ctx context.Context, w io.Writer, uuid UUID) error {
