@@ -15,13 +15,14 @@ func (u *Uploads) Delete(ctx context.Context, file *File) error {
 	return nil
 }
 
-func (u *Uploads) Writer(ctx context.Context, file *File) (io.WriteCloser, error) {
+// Writer satisfies io.WriteCloser interface.
+func (u *Uploads) Writer(ctx context.Context, file *File) (*writer, error) {
 	if file == nil {
 		return nil, os.ErrNotExist
 	}
 
 	file.Status = StatusUploading
-	if err := u.FileRepository.FileCreate(ctx, file); err != nil {
+	if err := u.files.FileCreate(ctx, file); err != nil {
 		return nil, err
 	}
 
@@ -81,7 +82,7 @@ func (w *writer) Close() error {
 	if err := w.Flush(); err != nil {
 		return err
 	}
-	return w.uploads.FileRepository.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
+	return w.uploads.files.FileUpdate(w.ctx, w.file.UUID, func(f *File) error {
 		f.Hash = w.hash.Sum(nil)
 		f.Status = StatusComplete
 		return nil

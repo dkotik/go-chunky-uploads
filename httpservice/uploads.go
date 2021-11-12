@@ -9,27 +9,14 @@ import (
 	chunkyUploads "github.com/dkotik/go-chunky-uploads"
 )
 
-func Uploads(u chunkyUploads.Uploads, sizeLimit int64) HTTPHandler {
-	save := func(ctx context.Context, f *chunkyUploads.File, h *multipart.FileHeader) error {
+func Uploads(u chunkyUploads.Uploads, field string, sizeLimit int64) HTTPHandler {
+	saveOneFile := func(ctx context.Context, f *chunkyUploads.File, h *multipart.FileHeader) error {
 		handle, err := h.Open()
 		if err != nil {
 			return err
 		}
 		defer handle.Close()
-
-		f.ContentType, err = DetectContentType(handle)
-		if err != nil {
-			return err
-		}
-		if err = u.FileCreate(ctx, f); err != nil {
-			return err
-		}
-		_, err = u.Save(ctx, f, handle)
-		if err != nil {
-			return err
-		}
-		// f.Size = n
-		return nil
+		return u.Save(ctx, f, handle)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -41,18 +28,17 @@ func Uploads(u chunkyUploads.Uploads, sizeLimit int64) HTTPHandler {
 		}
 
 		ctx := r.Context()
-		files := r.MultipartForm.File["upload"]
+		files := r.MultipartForm.File[field]
 		for _, file := range files {
 			f := &chunkyUploads.File{
 				Path:  file.Filename,
 				Title: file.Filename,
 				Size:  file.Size,
 			}
-			if err = save(ctx, f, file); err != nil {
+			if err = saveOneFile(ctx, f, file); err != nil {
 				return err
 			}
 		}
-
 		return nil
 	}
 }

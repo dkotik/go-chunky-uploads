@@ -1,6 +1,7 @@
 package httpservice
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 
@@ -35,7 +36,7 @@ func Index(u chunkyUploads.Uploads) HTTPHandler {
             </body>
         </html>
     `))
-	uploads, downloads := Uploads(u, 16<<20), Downloads(u)
+	uploads, downloads := Uploads(u, "upload", 16<<20), u.Download(u.FileByUUID())
 
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method == http.MethodPost {
@@ -50,12 +51,14 @@ func Index(u chunkyUploads.Uploads) HTTPHandler {
 			return downloads(w, r)
 		}
 
-		files, err := u.FileQuery(r.Context(), &chunkyUploads.FileQuery{
-			PerPage: 10000,
-		})
-		if err != nil {
-			return err
-		}
-		return t.Execute(w, files)
+		// files, err := u.FileQuery(r.Context(), &chunkyUploads.FileQuery{
+		// 	PerPage: 10000,
+		// })
+		// if err != nil {
+		// 	return err
+		// }
+		// return t.Execute(w, files)
+		fmt.Println(t)
+		return nil
 	}
 }

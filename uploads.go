@@ -14,8 +14,8 @@ var (
 )
 
 type Uploads struct {
-	FileRepository
-	ChunkRepository
+	files               FileRepository
+	chunks              ChunkRepository
 	hashProvider        func() hash.Hash
 	uuidProvider        func() UUID
 	contentTypeDetector ContentTypeDetector
@@ -24,12 +24,12 @@ type Uploads struct {
 }
 
 func (u *Uploads) Copy(ctx context.Context, w io.Writer, uuid UUID) error {
-	list, err := u.ChunkRepository.ChunkAttachmentList(ctx, uuid)
+	list, err := u.chunks.ChunkAttachmentList(ctx, uuid)
 	if err != nil {
 		return err
 	}
 	for _, one := range list {
-		chunk, err := u.ChunkRepository.ChunkRetrieve(ctx, one.Chunk)
+		chunk, err := u.chunks.ChunkRetrieve(ctx, one.Chunk)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (u *Uploads) Copy(ctx context.Context, w io.Writer, uuid UUID) error {
 }
 
 func (u *Uploads) CopyRange(ctx context.Context, w io.Writer, uuid UUID, ra Range) error {
-	list, err := u.ChunkRepository.ChunkAttachmentList(ctx, uuid)
+	list, err := u.chunks.ChunkAttachmentList(ctx, uuid)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (u *Uploads) CopyRange(ctx context.Context, w io.Writer, uuid UUID, ra Rang
 		if one.End < ra.Start {
 			continue // chunk does not apply
 		}
-		chunk, err := u.ChunkRepository.ChunkRetrieve(ctx, one.Chunk)
+		chunk, err := u.chunks.ChunkRetrieve(ctx, one.Chunk)
 		if err != nil {
 			return err
 		}
