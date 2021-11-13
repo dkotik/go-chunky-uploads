@@ -1,4 +1,4 @@
-package httpservice
+package main
 
 import (
 	"fmt"
@@ -8,9 +8,7 @@ import (
 	chunkyUploads "github.com/dkotik/go-chunky-uploads"
 )
 
-type HTTPHandler func(http.ResponseWriter, *http.Request) error
-
-func Index(u chunkyUploads.Uploads) HTTPHandler {
+func Index(u chunkyUploads.Uploads) chunkyUploads.HTTPHandler {
 	t := template.Must(template.New("index").Parse(`
         <html>
             <head>
@@ -25,26 +23,21 @@ func Index(u chunkyUploads.Uploads) HTTPHandler {
                     </li>
                     {{ end }}
                 </ul>
-                <form
-                  enctype="multipart/form-data"
-                  action="/upload"
-                  method="POST"
-                >
+                <form enctype="multipart/form-data" action="/upload" method="POST">
                   <input class="input file-input" type="file" name="file" multiple />
                   <button class="button" type="submit">Upload</button>
                 </form>
             </body>
         </html>
     `))
-	uploads, downloads := Uploads(u, "upload", 16<<20), u.Download(u.FileByUUID())
+	uploads, downloads := u.Upload("upload", 16<<20), u.Download(u.FileByUUID())
 
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method == http.MethodPost {
 			if err := uploads(w, r); err != nil {
 				return err
 			}
-			w.WriteHeader(http.StatusTemporaryRedirect)
-			// TODO: add redirect
+			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
 			return nil
 		}
 		if r.URL.Path != "/" {
@@ -61,4 +54,8 @@ func Index(u chunkyUploads.Uploads) HTTPHandler {
 		fmt.Println(t)
 		return nil
 	}
+}
+
+func main() {
+
 }

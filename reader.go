@@ -8,13 +8,21 @@ import (
 
 // Reader satisfies ReadSeekCloser interface.
 func (u *Uploads) Reader(ctx context.Context, file *File) (*Reader, error) {
-
-	return nil, nil
+	chunks, err := u.chunks.ChunkAttachmentList(ctx, file.UUID)
+	if err != nil {
+		return nil, err
+	}
+	return &Reader{
+		ctx:     ctx,
+		uploads: u,
+		chunks:  chunks,
+		size:    file.Size,
+	}, nil
 }
 
 type Reader struct {
-	uploads       *Uploads
 	ctx           context.Context
+	uploads       *Uploads
 	chunks        []*ChunkAttachment
 	chunk         *Chunk
 	size          int64
@@ -28,7 +36,7 @@ func (r *Reader) Seek(offset int64, whence int) (n int64, err error) {
 	case io.SeekCurrent:
 		n = r.cursor + offset
 	case io.SeekEnd:
-		n = r.size - offset
+		n = r.size + offset
 	default: // io.SeekStart
 		n = offset
 	}
@@ -68,4 +76,12 @@ func (r *Reader) Read(b []byte) (n int, err error) {
 		r.chunk = nil
 	}
 	return n, nil
+}
+
+func (r *Reader) Close() error {
+	r.uploads = nil
+	r.chunks = nil
+	r.chunk = nil
+	r.ctx = nil
+	return nil
 }
